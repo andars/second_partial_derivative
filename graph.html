@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MathBox - Empty</title>
+  <script src="mathbox/build/mathbox-bundle.js"></script>
+  <link rel="stylesheet" href="../build/mathbox.css">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1">
+</head>
+<body>
+  <script>
+    var mathbox = mathBox({
+      plugins: ['core', 'controls', 'cursor', 'mathbox'],
+      controls: {
+        // Orbit controls, i.e. Euler angles, with gimbal lock
+        klass: THREE.OrbitControls,
+
+        // Trackball controls, i.e. Free quaternion rotation
+        //klass: THREE.TrackballControls,
+      },
+    });
+    if (mathbox.fallback) throw "WebGL not supported"
+
+    var three = mathbox.three;
+    three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
+
+
+
+    // Do stuff with mathbox,
+    // for example: (see docs/intro.md)
+
+    // Place camera
+    var camera =
+      mathbox
+      .camera({
+        proxy: true,
+        position: [0, 0, 3],
+      });
+
+
+
+
+    surface_view = mathbox
+      .unit({
+        scale: 720,
+      })
+      .cartesian({
+        id: 'surface',
+        range: [[-2, 2], [-2, 2], [-2, 2]],
+        scale: [.5, .25, .5],
+        quaternion: [0, .923, 0, .382]
+    });
+
+    surface_view.axis({
+      axis: 1,
+    });
+    surface_view.axis({
+      axis: 3,
+    });
+
+    surface_view.grid({
+      width: 5,
+      opacity: 0.5,
+      axes: [1, 3],
+    });
+
+    function z(x,y) {
+        return x*x*x + y*y*y - 3*x*y;
+    }
+
+    function hessian(x,y) {
+        return [
+            [6*x,-3],[-3,6*y]
+        ];
+    }
+
+    function qf(x0,y0) {
+      var h = hessian(x0,y0);
+      return function(x,y) {
+        return h[0][0]*(x-x0)*(x-x0) + h[0][1]*(x-x0)*(y-y0)*2 + h[1][1]*(y-y0)*(y-y0) + z(x0,y0);
+      }
+    }
+
+    surface_view.area({
+      id: 'graph',
+      width: 64,
+      height: 64,
+      axes: [1, 3],
+      expr: function (emit, x, y, i, j, t) {
+        emit(x, z(x,y), y);
+      },
+      channels: 3
+    });
+    surface_view.surface({
+      color: 0x3090FF,
+      width: 2,
+      shaded: true,
+      opacity: 0.3,
+      lineX: true,
+      lineY: true,
+    });
+
+
+    view = mathbox
+      .unit({
+        scale: 720,
+      })
+      .cartesian({
+        id: 'quadratics',
+        range: [[-2, 2], [-2, 2], [-2, 2]],
+        scale: [.5, .25, .5],
+        quaternion: [0, .923, 0, .382]
+    });
+
+    view.axis({
+      axis: 1,
+    });
+    view.axis({
+      axis: 3,
+    });
+
+    view.grid({
+      width: 5,
+      opacity: 0.5,
+      axes: [1, 3],
+    });
+
+    function cp(x0,y0) {
+      var approx = qf(x0,y0);
+      view.area({
+          width: 32,
+          height: 32,
+          axes: [1,3],
+          rangeX: [-0.5+x0,x0+0.5],
+          rangeY: [-0.5+y0,y0+0.5],
+          expr: function(emit, x, y, i, j, t) {
+            emit(x, approx(x,y), y);
+          },
+          channels: 3,
+      });
+      view.surface({
+        color: 0xFF0000,
+        width: 2,
+        shaded: true,
+        lineX: true,
+        lineY: true,
+      });
+  }
+
+  cp(0,0);
+  cp(1,1);
+
+  window.focus();
+  var visible = true;
+  window.addEventListener('keydown', function(e) {
+    if (e.keyCode == 32) {
+      console.log('keydown');
+      visible = !visible;
+      mathbox.select('cartesian#surface').set('visible', visible);
+    }
+  });
+    
+  </script>
+</body>
+</html>
